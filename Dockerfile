@@ -1,22 +1,22 @@
 # Stage 1: Build
-FROM mcr.microsoft.com/dotnet/sdk:9.0-preview AS build
-WORKDIR /app
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
 
-# Copy everything and restore dependencies
+# Copy project files and restore dependencies
 COPY . ./
 RUN dotnet restore
 
-# Build the app
-RUN dotnet publish -c Release -o out
+# Build and publish the app
+RUN dotnet publish -c Release -o /app/out
 
 # Stage 2: Runtime
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-preview AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
 # Copy published output
 COPY --from=build /app/out ./
 
-# Expose a port for Render
+# Expose the port for Render
 ENV ASPNETCORE_URLS=http://+:10000
 EXPOSE 10000
 

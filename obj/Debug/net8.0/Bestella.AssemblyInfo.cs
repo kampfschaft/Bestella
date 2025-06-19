@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Bestella")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+42604880b98f9dfbd9719722fefd6bd655bf13d7")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1f690817bd32a402c6b69afaf8f74695cc05db0c")]
 [assembly: System.Reflection.AssemblyProductAttribute("Bestella")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Bestella")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
