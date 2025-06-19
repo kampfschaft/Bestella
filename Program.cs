@@ -33,4 +33,6 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+Console.WriteLine("Environment: " + app.Environment.EnvironmentName);
+
 app.Run();
