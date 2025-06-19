@@ -1,0 +1,119 @@
+@page "/pasteorder"
+@rendermode InteractiveServer
+
+@using Bestella.Models
+@using Bestella.Data
+
+@inject OrderDbContext Db
+
+<h3 class="mb-3">Paste WhatsApp Order</h3>
+
+<div class="mb-3">
+    <textarea class="form-control auto-resize" 
+              placeholder="Paste your WhatsApp order here..."
+              @bind="orderText"
+              @oninput="AutoResize"
+              @ref="textAreaRef"
+              rows="1"
+              style="overflow:hidden; resize:none;"></textarea>
+</div>
+
+<button class="btn btn-primary mb-4" @onclick="ParseOrder">Parse</button>
+
+@if (parsedOrder is not null)
+{
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <p><strong>Order Created ID:</strong> @parsedOrder.Id</p>
+            <p><strong>Name:</strong> @parsedOrder.Name</p>
+            <p><strong>Address:</strong> @parsedOrder.Address</p>
+            <p><strong>Date:</strong> @parsedOrder.Date</p>
+            <p><strong>Phone:</strong> @parsedOrder.Phone</p>
+
+            <ul class="list-group list-group-flush">
+                @foreach (var item in parsedOrder.Items)
+                {
+                    <li class="list-group-item">@item.Quantity x @item.ProductName</li>
+                }
+            </ul>
+        </div>
+    </div>
+}
+
+<style>
+    .auto-resize {
+        min-height: 100px;
+        font-family: inherit;
+        font-size: 1rem;
+        line-height: 1.5;
+        padding: 0.75rem;
+    }
+</style>
+
+@code {
+    private string orderText = string.Empty;
+    private ParsedOrder? parsedOrder;
+
+    private ElementReference textAreaRef;
+    private async Task ParseOrder()
+    {
+        if (string.IsNullOrWhiteSpace(orderText))
+            return;
+
+        parsedOrder = new ParsedOrder();
+        var lines = orderText.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("Nama", StringComparison.OrdinalIgnoreCase))
+                parsedOrder.Name = GetValue(line);
+
+            else if (line.StartsWith("Alamat", StringComparison.OrdinalIgnoreCase))
+                parsedOrder.Address = GetValue(line);
+
+            else if (line.StartsWith("Tarikh", StringComparison.OrdinalIgnoreCase))
+                parsedOrder.Date = GetValue(line);
+
+            else if (line.StartsWith("Phone", StringComparison.OrdinalIgnoreCase))
+                parsedOrder.Phone = GetValue(line);
+
+            else if (line.StartsWith("Type", StringComparison.OrdinalIgnoreCase))
+            {
+                var item = GetValue(line);
+                parsedOrder.Items.Add(new OrderItem { ProductName = item, Quantity = 1 });
+            }
+        }
+ 
+        long UserID = GetUserId();
+        parsedOrder.Id = UserID + long.Parse(DateTime.Now.ToString("yyMMddHHmmss"));
+
+        Db.Orders.Add(parsedOrder);
+        await Db.SaveChangesAsync();
+
+        // Optional: Clear input after save
+        orderText = string.Empty;
+    }
+
+    private long GetUserId()
+    {
+                    //xxxxyyMMddHHmmss
+                    //1000250619132531   
+        long UserID = 1000000000000000;
+
+        return UserID;
+    }
+
+    private static string GetValue(string line)
+    {
+        var parts = line.Split(':', 2);
+        return parts.Length > 1 ? parts[1].Trim() : string.Empty;
+    }
+
+    private async Task AutoResize(ChangeEventArgs e)
+    {
+        await JS.InvokeVoidAsync("resizeTextarea", textAreaRef);
+    }
+
+    [Inject]
+    private IJSRuntime JS { get; set; } = default!;
+}

@@ -1,0 +1,231 @@
+@page "/allorders"
+@rendermode InteractiveServer
+
+@using Microsoft.EntityFrameworkCore;
+@using Bestella.Models;
+@using Bestella.Data;
+@inject OrderDbContext Db
+
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold text-primary">All Orders</h3>
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" role="switch" id="sortSwitch" @bind="sortDescending">
+        <label class="form-check-label" for="sortSwitch">Newest First</label>
+    </div>
+</div>
+
+@if (orders == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!orders.Any())
+{
+    <div class="alert alert-info shadow-sm"> No Orders found.</div>
+}
+else
+{
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Date</th>
+                <th>Address</th>
+                <th>Items</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in orders)
+            {
+                <tr @onclick="() => OpenModal(order)" style="cursor: pointer;">
+                    <td>@order.Name</td>
+                    <td>@order.Phone</td>
+                    <td>@order.Date</td>
+                    <td>@order.Address</td>
+                    <td>
+                        <ul>
+                            @foreach (var item in order.Items)
+                            {
+                                <li>@item.Quantity x @item.ProductName</li>
+                            }
+                        </ul>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (selectedOrder is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Order</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Name</label>
+                        <input class="form-control" @bind="selectedOrder.Name" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Phone</label>
+                        <input class="form-control" @bind="selectedOrder.Phone" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Date</label>
+                        <input class="form-control" @bind="selectedOrder.Date" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Address</label>
+                        <input class="form-control" @bind="selectedOrder.Address" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Items</label>
+                        @foreach (var item in selectedOrder.Items)
+                        {
+                            <div class="d-flex mb-2">
+                                <input class="form-control me-2" placeholder=@($"Product={item.ProductName}") @bind="item.ProductName" />
+                                <input class="form-control" type="number"
+                                    min="1"
+                                    max="1000"
+                                    placeholder=@($"Quantity={item.Quantity}")
+                                    value="@item.Quantity"
+                                    @oninput="@((e) => OnQuantityInput(e, item))" />
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger me-auto" @onclick="DeleteOrder">Delete</button>
+                    <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button class="btn btn-primary" @onclick="SaveChanges">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ParsedOrder>? orders;
+    private ParsedOrder? selectedOrder;
+
+    private bool _sortDescending = true;
+    private bool sortDescending
+    {
+        get => _sortDescending;
+        set
+        {
+            if (_sortDescending != value)
+            {
+                _sortDescending = value;
+                _ = LoadOrders(); // Fire and forget
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        var query = Db.Orders.Include(o => o.Items);
+        orders = sortDescending
+            ? await query.OrderByDescending(o => o.Date).ToListAsync()
+            : await query.OrderBy(o => o.Date).ToListAsync();
+    }
+
+    private void OpenModal(ParsedOrder order)
+    {
+        // Create deep copy to avoid modifying original until saved
+        selectedOrder = new ParsedOrder
+        {
+            Id = order.Id,
+            Name = order.Name,
+            Phone = order.Phone,
+            Date = order.Date,
+            Address = order.Address,
+            Items = order.Items.Select(i => new OrderItem
+            {
+                Id = i.Id,
+                ProductName = i.ProductName,
+                Quantity = i.Quantity
+            }).ToList()
+        };
+    }
+
+    private void CloseModal()
+    {
+        selectedOrder = null;
+    }
+
+    private async Task SaveChanges()
+    {
+        if (selectedOrder is null)
+            return;
+
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Save changes to this order?"))
+            return;
+
+        var existing = await Db.Orders.Include(o => o.Items)
+                                      .FirstOrDefaultAsync(o => o.Id == selectedOrder.Id);
+
+        if (existing is not null)
+        {
+            existing.Name = selectedOrder.Name;
+            existing.Phone = selectedOrder.Phone;
+            existing.Date = selectedOrder.Date;
+            existing.Address = selectedOrder.Address;
+
+            // Replace all items
+            Db.OrderItems.RemoveRange(existing.Items);
+            existing.Items = selectedOrder.Items;
+
+            await Db.SaveChangesAsync();
+            await LoadOrders();
+        }
+
+        CloseModal();
+    }
+
+    private void OnQuantityInput(ChangeEventArgs e, OrderItem Item)
+    {
+        if(int.TryParse(e.Value?.ToString(), out var quantity))
+        {
+            Item.Quantity = quantity;
+        }
+        else
+        {
+            Item.Quantity = 0;
+        }
+    }
+
+    [Inject] IJSRuntime JSRuntime { get; set; } = default!;
+
+    private async Task DeleteOrder()
+    {
+        if (selectedOrder is null)
+            return;
+
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this order?"))
+            return;
+
+        var existing = await Db.Orders.Include(o => o.Items)
+                                      .FirstOrDefaultAsync(o => o.Id == selectedOrder.Id);
+
+        if (existing is not null)
+        {
+            Db.OrderItems.RemoveRange(existing.Items);
+            Db.Orders.Remove(existing);
+            await Db.SaveChangesAsync();
+            await LoadOrders();
+        }
+
+        CloseModal();
+    }
+}

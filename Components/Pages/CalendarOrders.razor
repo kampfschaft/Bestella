@@ -1,0 +1,277 @@
+@page "/calendarorders"
+@rendermode InteractiveServer
+@using System.Globalization
+@using Microsoft.EntityFrameworkCore;
+@using Bestella.Models;
+@using Bestella.Data;
+@inject OrderDbContext Db
+
+<h3 class="d-flex justify-content-between align-items-center mb-4">
+    <button class="btn btn-outline-secondary" @onclick="PreviousMonth">
+        <i class="bi bi-chevron-left"></i>
+    </button>
+    <span class="fs-4 fw-semibold">@monthName @currentYear</span>
+    <button class="btn btn-outline-secondary" @onclick="NextMonth">
+        <i class="bi bi-chevron-right"></i>
+    </button>
+</h3>
+
+<table class="table table-bordered text-center calendar-table">
+    <thead class="table-light">
+        <tr>
+            @foreach (var dayName in dayNames)
+            {
+                <th>@dayName</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var week in calendarWeeks)
+        {
+            <tr>
+                @foreach (var day in week)
+                {
+                    <td class="position-relative" style="height: 80px; vertical-align: top;">
+                        @if (day > 0)
+                        {
+                            <div class="position-relative">
+                                @{
+                                    var count = GetOrderCount(day);
+                                }
+                                @if (count > 0)
+                                {
+                                    <span class="order-count-badge bg-primary text-white">@count</span>
+                                }
+                                <button class="btn btn-sm btn-outline-primary w-100 mt-4" @onclick="@(() => OnDayClicked(day))">
+                                    @day
+                                </button>
+                            </div>
+                        }
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (showPopup)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">Orders on @selectedDay @monthName @currentYear</h5>
+                    <button type="button" class="btn-close" @onclick="ClosePopup"></button>
+                </div>
+                <div class="modal-body">
+                    @if (selectedDayOrders.Any())
+                    {
+                        <ul class="list-group">
+                            @foreach (var order in selectedDayOrders)
+                            {
+                                <li class="list-group-item">
+                                    <strong>@order.Name</strong><br />
+                                    <small>@order.Address</small><br />
+                                    <small>@order.Phone</small>
+
+                                    @if (order.Items is not null && order.Items.Any())
+                                    {
+                                        <ul class="mt-2 ps-3">
+                                            @foreach (var item in order.Items)
+                                            {
+                                                <li>@item.ProductName (@item.Quantity)</li>
+                                            }
+                                        </ul>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No orders on this date.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .order-count-badge {
+        position: absolute;
+        top: 2px;
+        right: 6px;
+        padding: 2px 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border-radius: 999px;
+        line-height: 1;
+        min-width: 20px;
+        text-align: center;
+        z-index: 10;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        transition: opacity 0.3s ease;
+    }
+
+    @@media (max-width: 576px) {
+        .calendar-table button {
+            font-size: 0.8rem;
+            padding: 4px;
+        }
+
+        .order-count-badge {
+            font-size: 0.6rem;
+            top: 2px;
+            right: 4px;
+        }
+    }
+
+    @@keyframes fadeInBadge {
+        from {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .fade-in {
+        animation: fadeInBadge 0.3s ease-in-out;
+    }
+</style>
+
+@code {
+    private int currentYear = DateTime.Now.Year;
+    private int currentMonth = DateTime.Now.Month;
+    private string monthName => CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(currentMonth);
+    private List<ParsedOrder> orders = new();
+    private List<ParsedOrder> selectedDayOrders = new();
+    private bool showPopup = false;
+    private int selectedDay;
+
+    private readonly string[] dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    private List<List<int>> calendarWeeks = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+        BuildCalendar();
+    }
+
+    private async Task LoadOrders()
+    {
+        var allOrders = await Db.Orders
+            .Include(o => o.Items) //Load related items
+            .ToListAsync();
+
+        orders = allOrders
+            .Where(o =>
+                TryParseFlexibleDate(o.Date, out var dt) &&
+                dt.Year == currentYear &&
+                dt.Month == currentMonth)
+            .ToList();
+    }
+
+    private void BuildCalendar()
+    {
+        calendarWeeks.Clear();
+        var firstDayOfMonth = new DateTime(currentYear, currentMonth, 1);
+        var daysInMonth = DateTime.DaysInMonth(currentYear, currentMonth);
+        var startDay = (int)firstDayOfMonth.DayOfWeek;
+
+        var week = new List<int>(new int[startDay]);
+        for (int day = 1; day <= daysInMonth; day++)
+        {
+            week.Add(day);
+            if (week.Count == 7)
+            {
+                calendarWeeks.Add(week);
+                week = new List<int>();
+            }
+        }
+        if (week.Count > 0)
+        {
+            while (week.Count < 7) week.Add(0);
+            calendarWeeks.Add(week);
+        }
+    }
+
+    private void OnDayClicked(int day)
+    {
+        selectedDay = day;
+        selectedDayOrders = orders
+            .Where(o =>
+                TryParseFlexibleDate(o.Date, out var dt) &&
+                dt.Day == day &&
+                dt.Month == currentMonth &&
+                dt.Year == currentYear)
+            .ToList();
+
+        showPopup = true;
+    }
+
+    private void PreviousMonth()
+    {
+        currentMonth--;
+        if (currentMonth < 1)
+        {
+            currentMonth = 12;
+            currentYear--;
+        }
+        _ = ReloadCalendar();
+    }
+
+    private void NextMonth()
+    {
+        currentMonth++;
+        if (currentMonth > 12)
+        {
+            currentMonth = 1;
+            currentYear++;
+        }
+        _ = ReloadCalendar();
+    }
+
+    private async Task ReloadCalendar()
+    {
+        await LoadOrders();
+        BuildCalendar();
+    }
+
+    private void ClosePopup()
+    {
+        showPopup = false;
+    }
+
+    private int GetOrderCount(int day)
+    {
+        return orders.Count(o =>
+            TryParseFlexibleDate(o.Date, out var dt) &&
+            dt.Day == day &&
+            dt.Month == currentMonth &&
+            dt.Year == currentYear);
+    }
+
+    private bool TryParseFlexibleDate(string dateStr, out DateTime date)
+    {
+        string[] formats = {
+            "dd MMMM yyyy", "d MMMM yyyy",
+            "dd/MM/yyyy", "dd/MM/yy",
+            "d/M/yyyy", "yyyy-MM-dd",
+            "MM/dd/yyyy"
+        };
+
+        return DateTime.TryParseExact(
+            dateStr,
+            formats,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out date
+        );
+    }
+}
