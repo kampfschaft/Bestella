@@ -199,3 +199,5 @@ C:\Project\Bestella\obj\Debug\net9.0\Bestella.csproj.Up2Date
 C:\Project\Bestella\obj\Debug\net9.0\compressed\9c1826y0s7-k2e3nqhieo.gz
 C:\Project\Bestella\obj\Debug\net9.0\compressed\816nv1ew28-k2e3nqhieo.gz
 C:\Project\Bestella\obj\Debug\net9.0\compressed\2hlxnqsqq4-8f77rtdm1q.gz
+C:\Project\Bestella\obj\Debug\net9.0\Bestella.sourcelink.json
+C:\Project\Bestella\bin\Debug\net9.0\App_Data\orders.db

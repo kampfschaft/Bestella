@@ -4,18 +4,19 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Ensure App_Data folder exists
-var dataDir = Path.Combine(AppContext.BaseDirectory, "App_Data");
-Directory.CreateDirectory(dataDir);
-var dbPath = Path.Combine(dataDir, "orders.db");
+var dbPath = "App_Data/orders.db";
+Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
 
-// Add services to the container.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+Console.WriteLine("Using database path: " + Path.GetFullPath(dbPath));
 
 builder.Services.AddDbContext<OrderDbContext>(options =>
     options.UseSqlite($"Data Source={dbPath}"));
 
+builder.Services.AddAntiforgery();
+
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+    
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
