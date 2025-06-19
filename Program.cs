@@ -12,11 +12,11 @@ Console.WriteLine("Using database path: " + Path.GetFullPath(dbPath));
 builder.Services.AddDbContext<OrderDbContext>(options =>
     options.UseSqlite($"Data Source={dbPath}"));
 
-builder.Services.AddAntiforgery();
+//builder.Services.AddAntiforgery();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-    
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -28,9 +28,13 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseStaticFiles();
+
+app.UseRouting();
+
 app.UseAntiforgery();
 
-app.MapStaticAssets();
+//app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
