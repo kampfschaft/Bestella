@@ -9,13 +9,13 @@
 <h3 class="mb-3">Paste WhatsApp Order</h3>
 
 <div class="mb-3">
-    <textarea class="form-control auto-resize" 
-              placeholder="Paste your WhatsApp order here..."
-              @bind="orderText"
-              @oninput="AutoResize"
-              @ref="textAreaRef"
-              rows="1"
-              style="overflow:hidden; resize:none;"></textarea>
+    <textarea class="form-control fixed-height-textarea"
+          placeholder="Paste your WhatsApp order here..."
+          @bind="orderText"
+          @ref="textAreaRef"
+          rows="10"
+          style="overflow:auto; resize:none;">
+    </textarea>
 </div>
 
 <button class="btn btn-primary mb-4" @onclick="ParseOrder">Parse</button>
@@ -40,6 +40,22 @@
     </div>
 }
 
+@if (showToast)
+{
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1000;">
+        <div class="toast align-items-center text-white bg-success border-0 show fade"
+             role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    Order parsed and saved successfully!
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                        @onclick="() => showToast = false"></button>
+            </div>
+        </div>
+    </div>
+}
+
 <style>
     .auto-resize {
         min-height: 100px;
@@ -48,9 +64,19 @@
         line-height: 1.5;
         padding: 0.75rem;
     }
+
+    .fixed-height-textarea {
+        height: 30vh; /* 50% of the viewport height */
+        font-family: inherit;
+        font-size: 1rem;
+        line-height: 1.5;
+        padding: 0.75rem;
+    }
 </style>
 
 @code {
+
+    private bool showToast = false;
     private string orderText = string.Empty;
     private ParsedOrder? parsedOrder;
 
@@ -92,6 +118,17 @@
 
         // Optional: Clear input after save
         orderText = string.Empty;
+
+        showToast = true;
+        StateHasChanged(); // force render
+
+        // auto-hide toast after 3 seconds
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(3000);
+            showToast = false;
+            await InvokeAsync(StateHasChanged);
+        });
     }
 
     private long GetUserId()
@@ -111,7 +148,7 @@
 
     private async Task AutoResize(ChangeEventArgs e)
     {
-        await JS.InvokeVoidAsync("resizeTextarea", textAreaRef);
+        //await JS.InvokeVoidAsync("resizeTextarea", textAreaRef);
     }
 
     [Inject]
