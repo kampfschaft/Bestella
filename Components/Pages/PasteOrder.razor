@@ -146,8 +146,9 @@
         return parts.Length > 1 ? parts[1].Trim() : string.Empty;
     }
 
-    private async Task AutoResize(ChangeEventArgs e)
+    private Task AutoResize(ChangeEventArgs e)
     {
+        return Task.CompletedTask;
         //await JS.InvokeVoidAsync("resizeTextarea", textAreaRef);
     }
 

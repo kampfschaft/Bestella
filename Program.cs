@@ -4,16 +4,21 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var dbPath = "App_Data/orders.db";
-Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+// var dbPath = "App_Data/orders.db";
+// Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
 
-Console.WriteLine("Using database path: " + Path.GetFullPath(dbPath));
+// Console.WriteLine("Using database path: " + Path.GetFullPath(dbPath));
 
-builder.Services.AddDbContext<OrderDbContext>(options =>
-    options.UseSqlite($"Data Source={dbPath}"));
+// builder.Services.AddDbContext<OrderDbContext>(options =>
+//     options.UseSqlite($"Data Source={dbPath}"));
 
 //builder.Services.AddAntiforgery();
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+builder.Services.AddDbContext<OrderDbContext>(options =>
+    options.UseNpgsql(connectionString));
+    
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
