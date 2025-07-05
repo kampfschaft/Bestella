@@ -76,8 +76,12 @@ else
                         <input class="form-control" @bind="selectedOrder.Phone" />
                     </div>
                     <div class="mb-3">
-                        <label>Date</label>
-                        <input class="form-control" @bind="selectedOrder.Date" />
+                        <label for="orderDate" class="form-label">Date</label>
+                        <input type="date"
+                            id="orderDate"
+                            class="form-control"
+                            value="@BindDate"
+                            @onchange="OnDateChanged" ss/>
                     </div>
                     <div class="mb-3">
                         <label>Address</label>
@@ -227,5 +231,25 @@ else
         }
 
         CloseModal();
+    }
+
+    private string BindDate
+    {
+        get
+        {
+            if (DateTime.TryParse(selectedOrder?.Date, out var dt))
+                return dt.ToString("yyyy-MM-dd");
+            return string.Empty;
+        }
+        set
+        {
+            if (selectedOrder != null && DateTime.TryParse(value, out var dt))
+                selectedOrder.Date = dt.ToString("dd MMMM yyyy"); // keep your original format
+        }
+    }
+
+    private void OnDateChanged(ChangeEventArgs e)
+    {
+        BindDate = e.Value?.ToString() ?? "";
     }
 }
