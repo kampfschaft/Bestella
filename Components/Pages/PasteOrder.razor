@@ -20,6 +20,15 @@
 
 <button class="btn btn-primary mb-4" @onclick="ParseOrder">Parse</button>
 
+@if (isLoading)
+{
+    <div class="text-center mt-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+
 @if (parsedOrder is not null)
 {
     <div class="card shadow-sm">
@@ -79,7 +88,7 @@
     private bool showToast = false;
     private string orderText = string.Empty;
     private ParsedOrder? parsedOrder;
-
+    private bool isLoading = false;
     private ElementReference textAreaRef;
     private async Task ParseOrder()
     {
@@ -113,8 +122,10 @@
         long UserID = GetUserId();
         parsedOrder.Id = UserID + long.Parse(DateTime.Now.ToString("yyMMddHHmmss"));
 
+        isLoading = true;
         Db.Orders.Add(parsedOrder);
         await Db.SaveChangesAsync();
+        isLoading = false;
 
         // Optional: Clear input after save
         orderText = string.Empty;

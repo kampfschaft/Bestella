@@ -20,6 +20,8 @@ C:\Project\Bestella\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Design.dll
 C:\Project\Bestella\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Relational.dll
 C:\Project\Bestella\bin\Debug\net8.0\Microsoft.Extensions.DependencyModel.dll
 C:\Project\Bestella\bin\Debug\net8.0\Mono.TextTemplating.dll
+C:\Project\Bestella\bin\Debug\net8.0\Npgsql.dll
+C:\Project\Bestella\bin\Debug\net8.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
 C:\Project\Bestella\bin\Debug\net8.0\System.CodeDom.dll
 C:\Project\Bestella\bin\Debug\net8.0\System.Composition.AttributedModel.dll
 C:\Project\Bestella\bin\Debug\net8.0\System.Composition.Convention.dll
@@ -102,5 +104,3 @@ C:\Project\Bestella\obj\Debug\net8.0\refint\Bestella.dll
 C:\Project\Bestella\obj\Debug\net8.0\Bestella.pdb
 C:\Project\Bestella\obj\Debug\net8.0\Bestella.genruntimeconfig.cache
 C:\Project\Bestella\obj\Debug\net8.0\ref\Bestella.dll
-C:\Project\Bestella\bin\Debug\net8.0\Npgsql.dll
-C:\Project\Bestella\bin\Debug\net8.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll

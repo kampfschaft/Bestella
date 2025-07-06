@@ -16,43 +16,54 @@
     </button>
 </h3>
 
-<table class="table table-bordered text-center calendar-table">
-    <thead class="table-light">
-        <tr>
-            @foreach (var dayName in dayNames)
-            {
-                <th>@dayName</th>
-            }
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var week in calendarWeeks)
-        {
+@if (isLoading)
+{
+    <div class="text-center mt-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <table class="table table-bordered text-center calendar-table">
+        <thead class="table-light">
             <tr>
-                @foreach (var day in week)
+                @foreach (var dayName in dayNames)
                 {
-                    <td class="position-relative" style="height: 80px; vertical-align: top;">
-                        @if (day > 0)
-                        {
-                            <div class="position-relative">
-                                @{
-                                    var count = GetOrderCount(day);
-                                }
-                                @if (count > 0)
-                                {
-                                    <span class="order-count-badge bg-primary text-white">@count</span>
-                                }
-                                <button class="btn btn-sm btn-outline-primary w-100 mt-4" @onclick="@(() => OnDayClicked(day))">
-                                    @day
-                                </button>
-                            </div>
-                        }
-                    </td>
+                    <th>@dayName</th>
                 }
             </tr>
-        }
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            @foreach (var week in calendarWeeks)
+            {
+                <tr>
+                    @foreach (var day in week)
+                    {
+                        <td class="position-relative" style="height: 80px; vertical-align: top;">
+                            @if (day > 0)
+                            {
+                                <div class="position-relative">
+                                    @{
+                                        var count = GetOrderCount(day);
+                                    }
+                                    @if (count > 0)
+                                    {
+                                        <span class="order-count-badge bg-primary text-white">@count</span>
+                                    }
+                                    <button class="btn btn-sm btn-outline-primary w-100 mt-4" @onclick="@(() => OnDayClicked(day))">
+                                        @day
+                                    </button>
+                                </div>
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}
 
 @if (showPopup)
 {
@@ -234,14 +245,16 @@
     private List<ParsedOrder> selectedDayOrders = new();
     private bool showPopup = false;
     private int selectedDay;
-
+    private bool isLoading = true;
     private readonly string[] dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     private List<List<int>> calendarWeeks = new();
 
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
         await LoadOrders();
         BuildCalendar();
+        isLoading = false;
     }
 
     private async Task LoadOrders()

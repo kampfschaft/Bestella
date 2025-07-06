@@ -15,7 +15,15 @@
     </div>
 </div>
 
-@if (orders == null)
+@if (isLoading)
+{
+    <div class="text-center mt-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (orders == null)
 {
     <p><em>Loading...</em></p>
 }
@@ -117,6 +125,8 @@ else
     private List<ParsedOrder>? orders;
     private ParsedOrder? selectedOrder;
 
+    private bool isLoading = true;
+
     private bool _sortDescending = true;
     private bool sortDescending
     {
@@ -133,7 +143,9 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
         await LoadOrders();
+        isLoading = false;
     }
 
     private async Task LoadOrders()
