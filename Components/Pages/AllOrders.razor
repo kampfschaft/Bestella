@@ -1,6 +1,7 @@
 @page "/allorders"
 @rendermode InteractiveServer
 
+@using System.Globalization
 @using Microsoft.EntityFrameworkCore;
 @using Bestella.Models;
 @using Bestella.Data;
@@ -11,7 +12,7 @@
     <h3 class="fw-bold text-primary">All Orders</h3>
     <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" role="switch" id="sortSwitch" @bind="sortDescending">
-        <label class="form-check-label" for="sortSwitch">Newest First</label>
+        <label class="form-check-label" for="sortSwitch">Most Recent First</label>
     </div>
 </div>
 
@@ -49,7 +50,7 @@ else
                 <tr @onclick="() => OpenModal(order)" style="cursor: pointer;">
                     <td>@order.Name</td>
                     <td>@order.Phone</td>
-                    <td>@order.Date</td>
+                    <td>@(order.ParsedDate?.ToString("dd MMMM yyyy") ?? order.Date)</td>
                     <td>@order.Address</td>
                     <td>
                         <ul>
@@ -121,9 +122,115 @@ else
     </div>
 }
 
+@if (showSaveConfirmation)
+{
+    <div class="confirmation-overlay" @onclick="CancelSaveChanges">
+        <div class="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmation-title" @onclick:stopPropagation>
+            <div class="confirmation-header">
+                <div class="confirmation-icon">
+                    <i class="bi bi-check2-circle" aria-hidden="true"></i>
+                </div>
+                <div>
+                    <h5 id="confirmation-title" class="mb-1">Confirmation</h5>
+                    <p class="mb-0 text-muted">Review your changes before saving.</p>
+                </div>
+                <button type="button" class="btn-close ms-auto" @onclick="CancelSaveChanges" aria-label="Close"></button>
+            </div>
+            <div class="confirmation-body">
+                <p class="mb-0">Save changes to this order?</p>
+            </div>
+            <div class="confirmation-footer">
+                <button class="btn btn-light" @onclick="CancelSaveChanges">Cancel</button>
+                <button class="btn btn-primary" @onclick="ConfirmSaveChanges">
+                    <i class="bi bi-check2 me-1" aria-hidden="true"></i>Save changes
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .confirmation-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1060;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(23, 35, 58, 0.48);
+    }
+
+    .confirmation-dialog {
+        width: min(100%, 440px);
+        overflow: hidden;
+        background: #fff;
+        border: 0;
+        border-radius: 1rem;
+        box-shadow: 0 1rem 3rem rgba(23, 35, 58, 0.2);
+        animation: confirmationFadeIn 0.2s ease-out;
+    }
+
+    .confirmation-header {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        padding: 1.25rem 1.5rem;
+        background: #f5f7ff;
+        border-bottom: 1px solid #e8ecf7;
+    }
+
+    .confirmation-icon {
+        display: grid;
+        width: 2.5rem;
+        height: 2.5rem;
+        flex: 0 0 2.5rem;
+        place-items: center;
+        color: #4a63f3;
+        background: #e4e9ff;
+        border-radius: 50%;
+        font-size: 1.25rem;
+    }
+
+    .confirmation-header h5 {
+        color: #24345d;
+        font-weight: 700;
+    }
+
+    .confirmation-body {
+        padding: 1.5rem;
+        color: #343d52;
+    }
+
+    .confirmation-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 0 1.5rem 1.5rem;
+    }
+
+    .confirmation-footer .btn-light {
+        color: #495057;
+        background: #f1f3f5;
+        border-color: #e2e6ea;
+    }
+
+    @@keyframes confirmationFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-0.5rem) scale(0.98);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+</style>
+
 @code {
     private List<ParsedOrder>? orders;
     private ParsedOrder? selectedOrder;
+    private bool showSaveConfirmation;
 
     private bool isLoading = true;
 
@@ -150,10 +257,44 @@ else
 
     private async Task LoadOrders()
     {
-        var query = Db.Orders.Include(o => o.Items);
+        var allOrders = await Db.Orders
+            .Include(o => o.Items)
+            .ToListAsync();
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
         orders = sortDescending
-            ? await query.OrderByDescending(o => o.Date).ToListAsync()
-            : await query.OrderBy(o => o.Date).ToListAsync();
+            ? allOrders.OrderByDescending(order => GetDistanceFromToday(order, today)).ToList()
+            : allOrders.OrderBy(order => GetDistanceFromToday(order, today)).ToList();
+    }
+
+    private static int GetDistanceFromToday(ParsedOrder order, DateOnly today)
+    {
+        var orderDate = GetOrderDate(order);
+        return orderDate is DateOnly date
+            ? Math.Abs(date.DayNumber - today.DayNumber)
+            : int.MaxValue;
+    }
+
+    private static DateOnly? GetOrderDate(ParsedOrder order)
+    {
+        if (order.ParsedDate is DateOnly parsedDate)
+            return parsedDate;
+
+        string[] formats =
+        [
+            "d MMMM yyyy", "dd MMMM yyyy", "d MMM yyyy", "dd MMM yyyy",
+            "d/M/yyyy", "dd/MM/yyyy", "d/M/yy", "dd/MM/yy", "yyyy-MM-dd",
+            "M/d/yyyy", "MM/dd/yyyy"
+        ];
+
+        return DateOnly.TryParseExact(
+            order.Date,
+            formats,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AllowWhiteSpaces,
+            out var legacyDate)
+            ? legacyDate
+            : null;
     }
 
     private void OpenModal(ParsedOrder order)
@@ -165,6 +306,7 @@ else
             Name = order.Name,
             Phone = order.Phone,
             Date = order.Date,
+            ParsedDate = order.ParsedDate,
             Address = order.Address,
             Items = order.Items.Select(i => new OrderItem
             {
@@ -180,13 +322,24 @@ else
         selectedOrder = null;
     }
 
-    private async Task SaveChanges()
+    private void SaveChanges()
+    {
+        if (selectedOrder is not null)
+            showSaveConfirmation = true;
+    }
+
+    private void CancelSaveChanges()
+    {
+        showSaveConfirmation = false;
+    }
+
+    private async Task ConfirmSaveChanges()
     {
         if (selectedOrder is null)
+        {
+            showSaveConfirmation = false;
             return;
-
-        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Save changes to this order?"))
-            return;
+        }
 
         var existing = await Db.Orders.Include(o => o.Items)
                                       .FirstOrDefaultAsync(o => o.Id == selectedOrder.Id);
@@ -196,6 +349,7 @@ else
             existing.Name = selectedOrder.Name;
             existing.Phone = selectedOrder.Phone;
             existing.Date = selectedOrder.Date;
+            existing.ParsedDate = selectedOrder.ParsedDate;
             existing.Address = selectedOrder.Address;
 
             // Replace all items
@@ -206,6 +360,7 @@ else
             await LoadOrders();
         }
 
+        showSaveConfirmation = false;
         CloseModal();
     }
 
@@ -249,14 +404,14 @@ else
     {
         get
         {
-            if (DateTime.TryParse(selectedOrder?.Date, out var dt))
-                return dt.ToString("yyyy-MM-dd");
+            if (selectedOrder?.ParsedDate is DateOnly date)
+                return date.ToString("yyyy-MM-dd");
             return string.Empty;
         }
         set
         {
-            if (selectedOrder != null && DateTime.TryParse(value, out var dt))
-                selectedOrder.Date = dt.ToString("dd MMMM yyyy"); // keep your original format
+            if (selectedOrder != null && DateOnly.TryParse(value, out var date))
+                selectedOrder.ParsedDate = date;
         }
     }
 

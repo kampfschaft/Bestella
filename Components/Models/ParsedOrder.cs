@@ -1,8 +1,6 @@
-using System.Collections.Generic;
-
 namespace Bestella.Models
 {
-    public class ParsedOrder
+    public partial class ParsedOrder
     {
         public long Id { get; set; }
         public string Name { get; set; } = "";

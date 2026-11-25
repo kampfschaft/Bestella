@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <DefaultItemExcludes>$(DefaultItemExcludes);Bestella.Tests\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Components\Models\ParsedOrder.cs" />
+    <Compile Remove="Bestella.Tests\**" />
+    <EmbeddedResource Remove="Bestella.Tests\**" />
+    <None Remove="Bestella.Tests\**" />
     <Content Include="App_Data\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

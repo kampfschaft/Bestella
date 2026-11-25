@@ -264,10 +264,7 @@ else
             .ToListAsync();
 
         orders = allOrders
-            .Where(o =>
-                TryParseFlexibleDate(o.Date, out var dt) &&
-                dt.Year == currentYear &&
-                dt.Month == currentMonth)
+            .Where(o => o.ParsedDate is DateOnly date && date.Year == currentYear && date.Month == currentMonth)
             .ToList();
     }
 
@@ -299,11 +296,7 @@ else
     {
         selectedDay = day;
         selectedDayOrders = orders
-            .Where(o =>
-                TryParseFlexibleDate(o.Date, out var dt) &&
-                dt.Day == day &&
-                dt.Month == currentMonth &&
-                dt.Year == currentYear)
+            .Where(o => o.ParsedDate is DateOnly date && date.Day == day && date.Month == currentMonth && date.Year == currentYear)
             .ToList();
 
         showPopup = true;
@@ -344,28 +337,6 @@ else
 
     private int GetOrderCount(int day)
     {
-        return orders.Count(o =>
-            TryParseFlexibleDate(o.Date, out var dt) &&
-            dt.Day == day &&
-            dt.Month == currentMonth &&
-            dt.Year == currentYear);
-    }
-
-    private bool TryParseFlexibleDate(string dateStr, out DateTime date)
-    {
-        string[] formats = {
-            "dd MMMM yyyy", "d MMMM yyyy",
-            "dd/MM/yyyy", "dd/MM/yy",
-            "d/M/yyyy", "yyyy-MM-dd",
-            "MM/dd/yyyy"
-        };
-
-        return DateTime.TryParseExact(
-            dateStr,
-            formats,
-            CultureInfo.InvariantCulture,
-            DateTimeStyles.None,
-            out date
-        );
+        return orders.Count(o => o.ParsedDate is DateOnly date && date.Day == day && date.Month == currentMonth && date.Year == currentYear);
     }
 }
